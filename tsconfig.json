@@ -20,6 +20,7 @@
     "files": [
       "./tsd.d.ts",
       "./components/pagination/pagination.ts",
+      "./components/clusterize/clusterize.ts",
       "./components/table/table.ts",
       "./components/table/filtering.ts",
       "./components/table/sorting.ts",

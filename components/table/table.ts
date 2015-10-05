@@ -5,13 +5,19 @@ import {
   Directive,
   EventEmitter, ElementRef,
   CORE_DIRECTIVES, NgClass, NgFor, NgIf,
-  FORM_DIRECTIVES
+  FORM_DIRECTIVES,
+  ViewEncapsulation,
+  OnInit
 } from 'angular2/angular2';
 
 import {Ng2ThSortable} from './sorting';
+import {Clusterize} from '../clusterize/clusterize';
 
 // todo: use lodash#defaults for configuration
 // todo: expose an option to change default configuration
+
+// webpack html imports
+let template = require('./table.html');
 
 @Component({
   selector: 'ng2-table, [ng2-table]',
@@ -19,34 +25,24 @@ import {Ng2ThSortable} from './sorting';
   outputs: ['tableChanged']
 })
 @View({
-  template: `
-<table class="table table-striped table-bordered dataTable"
-       role="grid" style="width: 100%;">
-  <thead>
-  <tr role="row">
-    <th *ng-for="#column of columns" [ng2-th-sortable]="config" [column]="column" (sort-changed)="onChangeTable($event)">
-      {{column.title}}
-      <i *ng-if="config && column.sort" class="pull-right glyphicon"
-        [ng-class]="{'glyphicon-chevron-down': column.sort === 'desc', 'glyphicon-chevron-up': column.sort === 'asc'}"></i>
-    </th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr *ng-for="#row of rows">
-    <td *ng-for="#column of columns">{{row[column.name]}}</td>
-  </tr>
-  </tbody>
-</table>
-`,
-  directives: [Ng2ThSortable, NgClass, CORE_DIRECTIVES, FORM_DIRECTIVES]
+  template: template,
+  directives: [Ng2ThSortable, Clusterize, NgClass, NgIf, NgFor, CORE_DIRECTIVES, FORM_DIRECTIVES]
 })
-export class Table {
+export class Table implements OnInit {
   // Table values
   public rows:Array<any> = [];
   private _columns:Array<any> = [];
   public config:any = {};
 
   // Outputs (Events)
+  public trs:Array<any> = [];
+  public currentCluster:number = 0;
+  public lastCluster:number = 0;
+  public topHeight:number = 0;
+  public bottomHeight:number = 0;
+  public rowsAbove:number = 0;
+  public countRows:number = 50;
+
   public tableChanged:EventEmitter = new EventEmitter();
 
   public set columns(values:Array<any>) {
@@ -77,8 +73,37 @@ export class Table {
     return {columns: sortColumns};
   }
 
-  onChangeTable(column) {
+  onInit() {
+    console.log(this.config);
+  }
+
+  onSortChanged(column) {
     this.columns = [column];
-    this.tableChanged.next({sorting: this.configColumns});
+    this.onChangeTable({sorting: this.configColumns});
+  }
+
+  onScrollChanged(event) {
+    this.currentCluster = event.currentCluster;
+    this.lastCluster = event.lastCluster;
+    this.topHeight = event.topHeight;
+    this.bottomHeight = event.bottomHeight;
+    this.rowsAbove = event.rowsAbove;
+    this.countRows = event.countRows;
+
+    this.trs = this.rows.slice(this.rowsAbove, this.rowsAbove + this.countRows + 1);
+    console.log(this.trs);
+    this.onChangeTable({clusterize: this.config.clusterize});
+  }
+
+  onClusterizeOptionChanged(event) {
+    if (event) {
+      this.config.clusterize = event;
+    }
+
+    this.onChangeTable({clusterize: this.config.clusterize});
+  }
+
+  onChangeTable(event) {
+    this.tableChanged.next(event);
   }
 }
