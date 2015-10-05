@@ -12,7 +12,7 @@ in this case, don't forget to include all of the imported entities to the option
 
 There are only simple table with 3 plugins/directives: `filtering`, `paging`, `sorting`. You don't need special `config` variable for storing settings for all plugins as is used in demo example. It's just showing usage sample.
 
-### Properties
+### Inputs
 
 - `config` (`?any`) - config for setup all plugins (filtering, sorting, paging):
   - `paging` (`?any`) - - switch on the paging plugin
@@ -30,7 +30,7 @@ There are only simple table with 3 plugins/directives: `filtering`, `paging`, `s
     - `name` (`string`) - the property name in data
     - `sort` (`?string|boolean`) - config for columns (+ sorting settings if it's needed), sorting is switched on by default for each column
 
-### Events
+### Outputs
 
 - `table-changed`: onclick event handler
 

@@ -21,6 +21,7 @@
     "files": [
       "./components/pagination/pagination.ts",
       "./components/table/table.ts",
+      "./components/table/sorting.ts",
       "./components/table/filtering.ts",
       "./components/table/table-config.ts",
       "./components/index.ts",
