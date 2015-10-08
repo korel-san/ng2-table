@@ -7,7 +7,7 @@ import {
   CORE_DIRECTIVES, NgClass, NgFor, NgIf,
   FORM_DIRECTIVES,
   ViewEncapsulation,
-  OnInit
+  OnInit, OnChanges
 } from 'angular2/angular2';
 
 import {Ng2ThSortable} from './sorting';
@@ -28,13 +28,12 @@ let template = require('./table.html');
   template: template,
   directives: [Ng2ThSortable, Clusterize, NgClass, NgIf, NgFor, CORE_DIRECTIVES, FORM_DIRECTIVES]
 })
-export class Table implements OnInit {
+export class Table implements OnInit, OnChanges {
   // Table values
   public rows:Array<any> = [];
   private _columns:Array<any> = [];
   public config:any = {};
 
-  // Outputs (Events)
   public trs:Array<any> = [];
   public currentCluster:number = 0;
   public lastCluster:number = 0;
@@ -42,7 +41,9 @@ export class Table implements OnInit {
   public bottomHeight:number = 0;
   public rowsAbove:number = 0;
   public countRows:number = 50;
+  private dataChanged:number;
 
+  // Outputs (Events)
   public tableChanged:EventEmitter = new EventEmitter();
 
   public set columns(values:Array<any>) {
@@ -77,12 +78,20 @@ export class Table implements OnInit {
     console.log(this.config);
   }
 
+  onChanges(changes) {
+    if (changes.rows) {
+      this.dataChanged = Date.now();
+    }
+  }
+
   onSortChanged(column) {
     this.columns = [column];
     this.onChangeTable({sorting: this.configColumns});
   }
 
   onScrollChanged(event) {
+    console.log('onScrollChanged:', event);
+
     this.currentCluster = event.currentCluster;
     this.lastCluster = event.lastCluster;
     this.topHeight = event.topHeight;
@@ -90,8 +99,8 @@ export class Table implements OnInit {
     this.rowsAbove = event.rowsAbove;
     this.countRows = event.countRows;
 
-    this.trs = this.rows.slice(this.rowsAbove, this.rowsAbove + this.countRows + 1);
-    console.log(this.trs);
+    this.trs = this.rows.slice(event.itemsStart, event.itemsEnd);
+
     this.onChangeTable({clusterize: this.config.clusterize});
   }
 

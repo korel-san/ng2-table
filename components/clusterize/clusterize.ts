@@ -6,13 +6,13 @@ import {
   CORE_DIRECTIVES, FORM_DIRECTIVES, NgClass,
   Renderer,
   ViewEncapsulation, ViewRef,
-  ViewContainerRef, TemplateRef, NgFor, NgIf, ComponentRef,
+  ViewContainerRef, TemplateRef, NgFor, NgIf, ComponentRef, Host, QueryList
 } from 'angular2/angular2';
 
 @Directive({
   selector: '[ng2-clusterize]',
   properties: [
-    'options: ng2Clusterize', 'data', 'columns', 'startCluster'
+    'options: ng2Clusterize', 'dataChanged', 'columns', 'startCluster', 'rowsLength'
   ],
   events: ['scrollChanged', 'clusterizeOptionChanged'],
   host: {
@@ -43,13 +43,13 @@ export class Clusterize implements OnInit, OnChanges {
   public clusterizeOptionChanged:EventEmitter = new EventEmitter();
   public rows:Array<any> = [];
   public columns:Array<any> = [];
-  public data:Array<any> = [];
   public startCluster:number = 0;
   public topHeight:number = 0;
   public bottomHeight:number = 0;
 
+  private dataChanged:number;
+  private rowsLength:number;
   private rowsAbove:number = 0;
-  private cache:any = {data: ''};
   private scrollTop:number = 0;
   private lastCluster:number = 0;
   private scrollDebounce:number = 0;
@@ -62,7 +62,7 @@ export class Clusterize implements OnInit, OnChanges {
   private _scrollElem:any;
   private _contentElem:any;
 
-  // SETTERS AND GETTERS
+  // *** SETTERS AND GETTERS ***
   // setup each received option (the others should be setuped by default)
   set options(opts: any) {
     let changed = false;
@@ -85,7 +85,7 @@ export class Clusterize implements OnInit, OnChanges {
     return this._options;
   }
 
-  set scrollElem (scrollId:string) {
+  set scrollElem(scrollId) {
     this._scrollElem = document.getElementById(scrollId);
 
     if (!this._scrollElem) {
@@ -97,7 +97,7 @@ export class Clusterize implements OnInit, OnChanges {
     return this._scrollElem;
   }
 
-  set contentElem(contentId:string) {
+  set contentElem(contentId) {
     this._contentElem = document.getElementById(contentId);
 
     if (!this._contentElem) {
@@ -109,48 +109,56 @@ export class Clusterize implements OnInit, OnChanges {
     return this._contentElem;
   }
 
-  // IMPLEMENTS
+  get currentCluster() {
+    return Math.floor(this.scrollTop / (this.options.clusterHeight - this.options.blockHeight)) || 0;
+  }
+
+  // *** IMPLEMENTS ***
+  // constructor (@Host() directive:Clusterize, @Query(DirectiveType) query:QueryList<Clusterize>) {
+  //  console.log(arguments);
+  // }
+
   onChanges(changes) {
-    console.log('this.scrollElem.scrollTop: ', this.scrollElem);
-    console.log('this.contentElem.scrollTop: ', this.contentElem);
-    console.log(changes);
+    console.log('onChanges: ', changes);
+
+    if (!this.rowsLength) {
+      this.clearSettings();
+      return;
+    }
+
+    let nodes = this.contentElem ? this.contentElem.children : [];
+
+    if (!nodes.length) {
+      return;
+    }
+
+    let itemHeight = nodes[Math.ceil(nodes.length / 2)].offsetHeight;
+    if (this.options.tag === 'tr' && this.getStyle('borderCollapse', this.contentElem) !== 'collapse') {
+      itemHeight += parseInt(this.getStyle('borderSpacing', this.contentElem), 10) || 0;
+    }
+    let blockHeight = itemHeight * this.options.rowsInBlock;
+    let rowsInCluster = this.options.blocksInCluster * this.options.rowsInBlock;
+    let clusterHeight = this.options.blocksInCluster * blockHeight;
+
+    this.options = {
+      clusterHeight: clusterHeight,
+      itemHeight: itemHeight,
+      blockHeight: blockHeight,
+      rowsInCluster: rowsInCluster
+    };
   }
 
   onInit() {
     this.updateEnvironment();
   }
 
-  public updateEnvironment() {
-    if (this.options) {
-      this.scrollElem = this.options.scrollId;
-      this.contentElem = this.options.contentId;
+  // *** EVENTS HANDLERS ***
 
-      // private parameters
-      this.rowsAbove = this.options.rowsAbove || this.options.rowsAbove;
-
-      // get row height
-      // this.exploreEnvironment();
-
-      // this.generateEmptyRow();
-
-      // append initial data
-      // this.insertToDOM();
-
-      this.scrollChanged.next({
-        currentCluster: this.startCluster,
-        lastCluster: this.lastCluster,
-        topHeight: this.topHeight,
-        bottomHeight: this.bottomHeight,
-        countRows: 50
-      });
-    }
-  }
-
-  // PUBLIC FUNCTIONS
   public onScrollChanged(event) {
     if (event) {
       event.preventDefault();
     }
+
     this.scrollChanged.next({
       currentCluster: this.startCluster,
       lastCluster: this.lastCluster,
@@ -160,7 +168,46 @@ export class Clusterize implements OnInit, OnChanges {
     });
   }
 
-  // PRIVATE FUNCTIONS
+  // *** PUBLIC FUNCTIONS ***
+  public updateEnvironment() {
+    if (!this.rowsLength) {
+      this.clearSettings();
+      return;
+    }
+
+    if (this.options) {
+      this.scrollElem = this.options.scrollId;
+      this.contentElem = this.options.contentId;
+      this.options = {
+        contentTag: (this.contentElem && this.contentElem.tagName)
+          ? this.contentElem.tagName.toLowerCase()
+          : this.options.contentTag
+      };
+
+      let itemsStart = Math.max((this.options.rowsInCluster - this.options.rowsInBlock) * this.currentCluster, 0);
+      let itemsEnd = itemsStart + this.options.rowsInCluster;
+      let topSpace = itemsStart * this.options.itemHeight;
+      let bottomSpace = (this.rowsLength - itemsEnd) * this.options.itemHeight;
+      // let rowsAbove = itemsStart;
+
+      this.scrollChanged.next({
+        currentCluster: this.currentCluster,
+        lastCluster: this.lastCluster,
+        topHeight: topSpace,
+        bottomHeight: bottomSpace,
+        // rowsAbove: this.rowsAbove,
+        itemsStart: itemsStart,
+        itemsEnd: itemsEnd
+      });
+    }
+  }
+
+  // *** PRIVATE FUNCTIONS ***
+
+  private clearSettings() {
+    this.options = Clusterize.CONST_DEFAULT_OPTIONS;
+  }
+
   private getNumberRowsAbove() {
     let data = this.generate();
     this.rows = data.rows;
@@ -172,14 +219,13 @@ export class Clusterize implements OnInit, OnChanges {
   }
 
   private resizeEv() {
-    clearTimeout(this.resizeDebounce);
-    this.resizeDebounce = setTimeout(this.refresh, 100);
+    // clearTimeout(this.resizeDebounce);
+    // this.resizeDebounce = setTimeout(this.refresh, 100);
   }
 
   private scrollEv() {
-    // fixes scrolling issue on Mac #3
-    if (this.isMac) {
-      if ( ! this.pointerEventsSet) {
+    if (this.contentElem) {
+      if (!this.pointerEventsSet) {
         this.contentElem.style.pointerEvents = 'none';
       }
       this.pointerEventsSet = true;
@@ -189,84 +235,16 @@ export class Clusterize implements OnInit, OnChanges {
         this.pointerEventsSet = false;
       }, 50);
     }
-    if (this.lastCluster !== (this.lastCluster = this.getClusterNum())) {
-      this.insertToDOM();
-    }
   }
 
-  // public methods
-  public destroy(clean) {
-    // off('scroll', this.scrollElem, this.scrollEv);
-    // off('resize', window, this.resizeEv);
-    if (clean) {
-      this.generateEmptyRow();
-    }
-  }
-
-  public refresh() {
-    let rowsHeight = this.getRowsHeight();
-    if (rowsHeight) {
-      this.update(this.rows);
-    }
-  }
-
-  public update(newRows) {
-    this.rows = Array.isArray(newRows)
-      ? newRows
-      : [];
+  public update() {
     this.scrollTop = this.scrollElem.scrollTop;
     // fixes #39
-    if (this.rows.length * this.options.itemHeight < this.scrollTop) {
+    if (this.rowsLength * this.options.itemHeight < this.scrollTop) {
       this.scrollElem.scrollTop = 0;
       this.lastCluster = 0;
     }
-    this.insertToDOM();
     this.scrollElem.scrollTop = this.scrollTop;
-  }
-
-  public clear() {
-    this.update([]);
-  }
-
-  public getRowsAmount() {
-    return this.rows.length;
-  }
-
-  private add(where, _newRows) {
-    let newRows = Array.isArray(_newRows)
-      ? _newRows
-      : [];
-    if ( ! newRows.length) {
-      return;
-    }
-    this.rows = where === 'append'
-      ? this.rows.concat(newRows)
-      : newRows.concat(this.rows);
-    this.insertToDOM();
-  }
-
-  // fetch existing markup
-  public fetchMarkup() {
-    let rows = [], rowsNodes = this.getChildNodes(this.contentElem);
-
-    while (rowsNodes.length) {
-      rows.push(rowsNodes.shift().outerHTML);
-    }
-
-    return rows;
-  }
-
-  // get tag name, content tag name, tag height, calc cluster height
-  public exploreEnvironment() {
-    let opts = this.options;
-
-    opts.contentTag = this.contentElem.tagName.toLowerCase();
-
-    if (!this.data.length) {
-      return;
-    }
-
-    this.getRowsHeight();
   }
 
   public getRowsHeight() {
@@ -275,7 +253,7 @@ export class Clusterize implements OnInit, OnChanges {
 
     opts.clusterHeight = 0;
 
-    if (!this.rows.length) {
+    if (!this.rowsLength) {
       return;
     }
 
@@ -296,30 +274,17 @@ export class Clusterize implements OnInit, OnChanges {
     return prevItemHeight !== opts.itemHeight;
   }
 
-  // get current cluster number
-  public getClusterNum() {
-    return Math.floor(this.scrollTop / (this.options.clusterHeight - this.options.blockHeight)) || 0;
-  }
-
-  // generate empty row if no data provided
-  public generateEmptyRow() {
-    this.options.showNoDataRow = true;
-    this.rows = [this.data[0], this.data[1], this.data[2]];
-
-    return this.rows;
-  }
-
   // generate cluster for current scroll position
   public generate() {
-    let rows = this.data;
-    let clusterNum = this.getClusterNum();
+    let rows = this.rows;
+    let clusterNum = this.currentCluster;
     let opts = this.options;
-    let rowsLen = this.rows.length;
+    let rowsLen = this.rowsLength;
 
     if (rowsLen < opts.rowsInBlock) {
       return {
         rowsAbove: 0,
-        rows: rowsLen ? this.rows : this.generateEmptyRow()
+        rows: rowsLen ? this.rows : []
       };
     }
 
@@ -334,14 +299,7 @@ export class Clusterize implements OnInit, OnChanges {
     let thisClusterRows = [];
     let rowsAbove = itemsStart;
 
-    if (topSpace > 0) {
-      if (opts.keepParity) {
-        thisClusterRows.push(this.renderExtraTag('keep-parity'));
-      }
-      thisClusterRows.push(this.renderExtraTag('top-space', topSpace));
-    } else {
-      rowsAbove++;
-    }
+    rowsAbove++;
 
     for (let i = itemsStart; i < itemsEnd; i++) {
       if (rows[i]) {
@@ -349,36 +307,10 @@ export class Clusterize implements OnInit, OnChanges {
       }
     }
 
-    if (bottomSpace > 0) {
-      thisClusterRows.push(this.renderExtraTag('bottom-space', bottomSpace));
-    }
-
     return {
       rowsAbove: rowsAbove,
       rows: thisClusterRows
     };
-  }
-
-  public renderExtraTag(className, height?:number) {
-    let tag = document.createElement(this.options.tag);
-    let clusterizePrefix = 'clusterize-extra-row clusterize-keep-parity clusterize-top-space clusterize-bottom-space';
-
-    tag.className = [clusterizePrefix + 'extra-row', clusterizePrefix + className].join(' ');
-
-    if (height) {
-      tag.style.height = height + 'px';
-    }
-
-    return tag.outerHTML;
-  }
-
-  public getChildNodes(tag) {
-    let childNodes = tag.children,
-      ie8ChildNodesHelper = [];
-    for (let i = 0, ii = childNodes.length; i < ii; i++) {
-      ie8ChildNodesHelper.push(childNodes[i]);
-    }
-    return Array.prototype.slice.call(ie8ChildNodesHelper);
   }
 
   // support functions

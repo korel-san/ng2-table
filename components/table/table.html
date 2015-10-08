@@ -20,8 +20,11 @@
   <div *ng-if="config && config.clusterize" id="{{config.clusterize.scrollId}}" class="clusterize-scroll">
     <table class="table table-striped table-bordered dataTable" role="grid" style="width: 100%;">
       <tbody id="{{config.clusterize.contentId}}" class="clusterize-content" tabindex="0"
-             [ng2-clusterize]="config.clusterize" [data]="rows" [columns]="columns" (scroll-changed)="onScrollChanged($event)"
-             [start-cluster]="0" (clusterize-option-changed)="onClusterizeOptionChanged($event)">
+             [ng2-clusterize]="config.clusterize" [columns]="columns"
+             [data-changed]="dataChanged"
+             [rows-length]="rows.length"
+             (scroll-changed)="onScrollChanged($event)"
+             (clusterize-option-changed)="onClusterizeOptionChanged($event)">
         <tr [hidden]="config.clusterize.showNoDataRow" class="{{config.clusterize.noDataClass}}">
           <td *ng-for="#column of columns">{{config.clusterize.noDataText}}</td>
         </tr>
