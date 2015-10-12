@@ -10,8 +10,8 @@ import {Table} from './table';
 
 @Directive({
   selector: '[ng2-th-sortable]',
-  properties: ['config: ng2ThSortable', 'column'],
-  events: ['sortChanged'],
+  inputs: ['config: ng2ThSortable', 'column'],
+  outputs: ['sortChanged'],
   host: {
     '(click)': 'onToggleSort($event, $target)'
   }

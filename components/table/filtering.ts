@@ -13,8 +13,8 @@ function setProperty(renderer: Renderer, elementRef: ElementRef, propName: strin
 
 @Directive({
   selector: '[ng2-table-filter]',
-  properties: ['config: ng2TableFilter'],
-  events: ['tableChanged'],
+  inputs: ['config: ng2TableFilter'],
+  outputs: ['tableChanged'],
   host: {
     '(input)': 'onChangeFilter($event.target.value)'
   }

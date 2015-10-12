@@ -27,13 +27,13 @@ const paginationConfig = {
 
 @Component({
   selector: 'pagination[ng-model], [pagination][ng-model]',
-  properties: [
+  inputs: [
     'rotate', 'disabled',
     'totalItems', 'itemsPerPage', 'maxSize',
     'boundaryLinks', 'directionLinks',
     'firstText', 'previousText', 'nextText', 'lastText'
   ],
-  events: ['numPages', 'pagechanged']
+  outputs: ['numPages', 'pagechanged']
 })
 @View({
   template: `
@@ -284,7 +284,7 @@ const pagerConfig = {
 
 @Component({
   selector: 'pager[ng-model], [pager][ng-model]',
-  properties: [
+  inputs: [
     'align',
     'totalItems', 'itemsPerPage',
     'previousText', 'nextText',

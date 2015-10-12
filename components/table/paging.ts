@@ -8,8 +8,8 @@ import {
 
 @Directive({
   selector: '[ng2-table-paging]',
-  properties: ['config: ng2TablePaging'],
-  events: ['tableChanged'],
+  inputs: ['config: ng2TablePaging'],
+  outputs: ['tableChanged'],
   host: {
     '(pagechanged)': 'onChangePage($event)'
   }
