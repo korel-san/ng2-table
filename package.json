@@ -1,6 +1,6 @@
 {
   "name": "ng2-table",
-  "version": "0.37.1",
+  "version": "0.40.0",
   "description": "angular2 table components",
   "scripts": {
     "deploy": "NODE_ENV=production webpack -p --progress --color --optimize-minimize --optimize-dedupe --optimize-occurence-order",
@@ -41,10 +41,10 @@
   "homepage": "https://github.com/valor-software/ng2-table#readme",
   "dependencies": {
     "angular2": "^2.0.0-alpha.40",
+    "ng2-bootstrap": "^0.40.0",
     "reflect-metadata": "0.1.2",
-    "ts-loader": "^0.5.6",
-    "zone.js": "0.5.8",
-    "ng2-bootstrap": "^0.37.2"
+    "ts-loader": "0.5.6",
+    "zone.js": "0.5.8"
   },
   "devDependencies": {
     "bootstrap": "^3.3.5",

@@ -6,8 +6,6 @@ import {
   CORE_DIRECTIVES, NgClass, FORM_DIRECTIVES
 } from 'angular2/angular2';
 
-import {Table} from './table';
-
 @Directive({
   selector: '[ng2-th-sortable]',
   inputs: ['config: ng2ThSortable', 'column'],
