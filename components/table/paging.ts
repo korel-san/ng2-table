@@ -1,7 +1,7 @@
 /// <reference path="../../tsd.d.ts" />
 
 import {
-  Directive, LifecycleEvent,
+  Directive,
   EventEmitter, ElementRef,
   CORE_DIRECTIVES, NgClass, FORM_DIRECTIVES
 } from 'angular2/angular2';

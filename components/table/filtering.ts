@@ -1,12 +1,15 @@
 /// <reference path="../../tsd.d.ts" />
 
 import {
-  Directive, LifecycleEvent,
+  Directive,
   EventEmitter, ElementRef, Renderer,
   CORE_DIRECTIVES, NgClass, FORM_DIRECTIVES
 } from 'angular2/angular2';
 
-import {setProperty} from 'angular2/src/forms/directives/shared';
+// import {setProperty} from 'angular2/ts/src/core/forms/directives/shared';
+function setProperty(renderer: Renderer, elementRef: ElementRef, propName: string, propValue: any) {
+  renderer.setElementProperty(elementRef, propName, propValue);
+}
 
 @Directive({
   selector: '[ng2-table-filter]',
