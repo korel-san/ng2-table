@@ -21,12 +21,12 @@ let template = require('./table-demo.html');
 export class TableDemo implements OnInit {
   public rows:Array<any> = [];
   public columns:Array<any> = [
-    {title: 'Name', name: 'name'},
-    {title: 'Position', name: 'position', sort: false},
-    {title: 'Office', name: 'office', sort: 'asc'},
-    {title: 'Extn.', name: 'ext', sort: 'desc', fixedWidth: '9%'},
-    {title: 'Start date', name: 'startDate'},
-    {title: 'Salary', name: 'salary'}
+    {title: 'Name', name: 'name', fixedWidth: '20%'},
+    {title: 'Position', name: 'position', sort: false, fixedWidth: '20%'},
+    {title: 'Office', name: 'office', fixedWidth: '20%'},
+    {title: 'Extn.', name: 'ext', fixedWidth: '10%'},
+    {title: 'Start date', name: 'startDate', fixedWidth: '15%'},
+    {title: 'Salary', name: 'salary', fixedWidth: '15%'}
   ];
   public page:number = 1;
   public itemsPerPage:number = 10;

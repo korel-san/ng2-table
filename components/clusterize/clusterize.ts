@@ -34,7 +34,8 @@ export class Clusterize implements OnInit, OnChanges {
     showNoDataRow: true,
     noDataClass: 'clusterize-no-data',
     noDataText: 'Loading data...',
-    keepParity: true
+    keepParity: true,
+    clusterize: true
   };
 
   private _options:any = Clusterize.CONST_DEFAULT_OPTIONS;
@@ -47,24 +48,22 @@ export class Clusterize implements OnInit, OnChanges {
   public topHeight:number = 0;
   public bottomHeight:number = 0;
 
+  private previousCluster:number = -1;
   private dataChanged:number;
   private rowsLength:number;
-  private rowsAbove:number = 0;
   private scrollTop:number = 0;
-  private lastCluster:number = 0;
   private scrollDebounce:number = 0;
-  private resizeDebounce:number = 0;
   private pointerEventsSet:boolean = false;
+  private i:number = 0;
 
   // todo: check this variables
-  private scrollId:string = '';
-  private contentId:string = '';
-  private _scrollElem:any;
-  private _contentElem:any;
+  private scrollElem:any;
+  private contentElem:any;
 
   // *** SETTERS AND GETTERS ***
   // setup each received option (the others should be setuped by default)
   set options(opts: any) {
+    console.log('set opts: ', opts);
     let changed = false;
 
     if (typeof opts === 'object') {
@@ -76,6 +75,10 @@ export class Clusterize implements OnInit, OnChanges {
       }
     }
 
+    this._options.contentTag = (this.contentElem && this.contentElem.tagName)
+        ? this.contentElem.tagName.toLowerCase()
+        : this.options.contentTag;
+
     if (changed) {
       this.clusterizeOptionChanged.next(this.options);
     }
@@ -85,48 +88,46 @@ export class Clusterize implements OnInit, OnChanges {
     return this._options;
   }
 
-  set scrollElem(scrollId) {
-    this._scrollElem = document.getElementById(scrollId);
-
-    if (!this._scrollElem) {
-      throw new Error('Error! Could not find scroll element');
-    }
-  }
-
-  get scrollElem() {
-    return this._scrollElem;
-  }
-
-  set contentElem(contentId) {
-    this._contentElem = document.getElementById(contentId);
-
-    if (!this._contentElem) {
-      throw new Error('Error! Could not find content element');
-    }
-  }
-
-  get contentElem() {
-    return this._contentElem;
-  }
-
   get currentCluster() {
+    console.log(this.options);
     return Math.floor(this.scrollTop / (this.options.clusterHeight - this.options.blockHeight)) || 0;
   }
 
+  get lastCluster() {
+    return Math.floor(this._options.itemHeight * this.rowsLength / this.options.clusterHeight);
+  }
+
   // *** IMPLEMENTS ***
-  // constructor (@Host() directive:Clusterize, @Query(DirectiveType) query:QueryList<Clusterize>) {
-  //  console.log(arguments);
-  // }
+  constructor (@Host() elem:ElementRef) {
+    this.scrollElem = elem.nativeElement;
+    console.log(this.scrollElem, this.contentElem);
+  }
 
   onChanges(changes) {
-    console.log('onChanges: ', changes);
+  }
 
-    if (!this.rowsLength) {
-      this.clearSettings();
-      return;
+  onInit() {
+    this.updateOptions();
+    this.calcScroll();
+  }
+
+  // *** EVENTS HANDLERS ***
+
+  public onScrollChanged(event) {
+    if (event) {
+      event.preventDefault();
     }
 
-    let nodes = this.contentElem ? this.contentElem.children : [];
+    this.updateOptions();
+    this.calcScroll();
+  }
+
+  public updateOptions() {
+    if (!this.contentElem) {
+      this.contentElem = this.scrollElem.querySelector('#' + this.options.contentId);
+    };
+
+    let nodes = this.contentElem ? this.contentElem.querySelectorAll('.clusterize-row') : [];
 
     if (!nodes.length) {
       return;
@@ -141,65 +142,40 @@ export class Clusterize implements OnInit, OnChanges {
     let clusterHeight = this.options.blocksInCluster * blockHeight;
 
     this.options = {
-      clusterHeight: clusterHeight,
-      itemHeight: itemHeight,
+      itemHeight : itemHeight,
       blockHeight: blockHeight,
-      rowsInCluster: rowsInCluster
+      rowsInCluster: rowsInCluster,
+      clusterHeight: clusterHeight
     };
   }
 
-  onInit() {
-    this.updateEnvironment();
-  }
-
-  // *** EVENTS HANDLERS ***
-
-  public onScrollChanged(event) {
-    if (event) {
-      event.preventDefault();
-    }
-
-    this.scrollChanged.next({
-      currentCluster: this.startCluster,
-      lastCluster: this.lastCluster,
-      topHeight: this.topHeight,
-      bottomHeight: this.bottomHeight,
-      countRows: 50
-    });
-  }
-
   // *** PUBLIC FUNCTIONS ***
-  public updateEnvironment() {
-    if (!this.rowsLength) {
-      this.clearSettings();
-      return;
-    }
-
-    if (this.options) {
-      this.scrollElem = this.options.scrollId;
-      this.contentElem = this.options.contentId;
-      this.options = {
-        contentTag: (this.contentElem && this.contentElem.tagName)
-          ? this.contentElem.tagName.toLowerCase()
-          : this.options.contentTag
-      };
-
+  public calcScroll() {
+    if (this.options.clusterize) {
+      this.scrollTop = this.scrollElem.scrollTop;
       let itemsStart = Math.max((this.options.rowsInCluster - this.options.rowsInBlock) * this.currentCluster, 0);
       let itemsEnd = itemsStart + this.options.rowsInCluster;
       let topSpace = itemsStart * this.options.itemHeight;
       let bottomSpace = (this.rowsLength - itemsEnd) * this.options.itemHeight;
-      // let rowsAbove = itemsStart;
 
+      console.log('currentCluster: ', this.currentCluster);
+      console.log('previousCluster: ', this.previousCluster);
+      console.log('scrollTop: ', this.scrollTop);
       this.scrollChanged.next({
         currentCluster: this.currentCluster,
+        previousCluster: this.previousCluster,
         lastCluster: this.lastCluster,
         topHeight: topSpace,
         bottomHeight: bottomSpace,
-        // rowsAbove: this.rowsAbove,
         itemsStart: itemsStart,
-        itemsEnd: itemsEnd
+        itemsEnd: itemsEnd,
+        blockPosition: this.currentCluster > this.previousCluster ? 'append' : 'prepend',
+        removeItemsStart: this.currentCluster > this.previousCluster ? 0 : -this.options.rowsInBlock,
+        removeItemsEnd: this.currentCluster > this.previousCluster ? this.options.rowsInBlock : this.options.rowsInCluster
       });
+      this.previousCluster = this.currentCluster;
     }
+
   }
 
   // *** PRIVATE FUNCTIONS ***
@@ -208,115 +184,6 @@ export class Clusterize implements OnInit, OnChanges {
     this.options = Clusterize.CONST_DEFAULT_OPTIONS;
   }
 
-  private getNumberRowsAbove() {
-    let data = this.generate();
-    this.rows = data.rows;
-
-    if (this.options.contentTag === 'ol') {
-      this.options.rowsAbove = data.rowsAbove;
-      this.contentElem.setAttribute('start', data.rowsAbove);
-    }
-  }
-
-  private resizeEv() {
-    // clearTimeout(this.resizeDebounce);
-    // this.resizeDebounce = setTimeout(this.refresh, 100);
-  }
-
-  private scrollEv() {
-    if (this.contentElem) {
-      if (!this.pointerEventsSet) {
-        this.contentElem.style.pointerEvents = 'none';
-      }
-      this.pointerEventsSet = true;
-      clearTimeout(this.scrollDebounce);
-      this.scrollDebounce = setTimeout(function () {
-        this.contentElem.style.pointerEvents = 'auto';
-        this.pointerEventsSet = false;
-      }, 50);
-    }
-  }
-
-  public update() {
-    this.scrollTop = this.scrollElem.scrollTop;
-    // fixes #39
-    if (this.rowsLength * this.options.itemHeight < this.scrollTop) {
-      this.scrollElem.scrollTop = 0;
-      this.lastCluster = 0;
-    }
-    this.scrollElem.scrollTop = this.scrollTop;
-  }
-
-  public getRowsHeight() {
-    let opts = this.options;
-    let prevItemHeight = opts.itemHeight;
-
-    opts.clusterHeight = 0;
-
-    if (!this.rowsLength) {
-      return;
-    }
-
-    let nodes = this.contentElem.children || [];
-    if (nodes.length) {
-      opts.itemHeight = nodes[Math.ceil(nodes.length / 2)].offsetHeight;
-    }
-
-    // consider table's border-spacing
-    if (opts.tag === 'tr' && this.getStyle('borderCollapse', this.contentElem) !== 'collapse') {
-      opts.itemHeight += parseInt(this.getStyle('borderSpacing', this.contentElem), 10) || 0;
-    }
-
-    opts.blockHeight = opts.itemHeight * opts.rowsInBlock;
-    opts.rowsInCluster = opts.blocksInCluster * opts.rowsInBlock;
-    opts.clusterHeight = opts.blocksInCluster * opts.blockHeight;
-
-    return prevItemHeight !== opts.itemHeight;
-  }
-
-  // generate cluster for current scroll position
-  public generate() {
-    let rows = this.rows;
-    let clusterNum = this.currentCluster;
-    let opts = this.options;
-    let rowsLen = this.rowsLength;
-
-    if (rowsLen < opts.rowsInBlock) {
-      return {
-        rowsAbove: 0,
-        rows: rowsLen ? this.rows : []
-      };
-    }
-
-    if (!opts.clusterHeight) {
-      this.getRowsHeight();
-    }
-
-    let itemsStart = Math.max((opts.rowsInCluster - opts.rowsInBlock) * clusterNum, 0);
-    let itemsEnd = itemsStart + opts.rowsInCluster;
-    let topSpace = itemsStart * opts.itemHeight;
-    let bottomSpace = (rowsLen - itemsEnd) * opts.itemHeight;
-    let thisClusterRows = [];
-    let rowsAbove = itemsStart;
-
-    rowsAbove++;
-
-    for (let i = itemsStart; i < itemsEnd; i++) {
-      if (rows[i]) {
-        thisClusterRows.push(rows[i]);
-      }
-    }
-
-    return {
-      rowsAbove: rowsAbove,
-      rows: thisClusterRows
-    };
-  }
-
-  // support functions
-  public on(evt, element, fnc) {
-    return element.addEventListener ? element.addEventListener(evt, fnc, false) : element.attachEvent('on' + evt, fnc);
-  }
   public getStyle(prop, elem) {
     return window.getComputedStyle ? window.getComputedStyle(elem)[prop] : elem.currentStyle[prop];
   }

@@ -30,7 +30,7 @@
         </tr>
         <tr [hidden]="currentCluster === 0 || !config.clusterize.keepParity" class="clusterize-extra-row clusterize-keep-parity"></tr>
         <tr [hidden]="currentCluster === 0" class="clusterize-extra-row clusterize-top-space" [style.height]="topHeight"></tr>
-        <tr *ng-for="#tr of trs">
+        <tr *ng-for="#tr of trs" class="clusterize-row">
           <td *ng-for="#column of columns">{{tr[column.name]}}</td>
         </tr>
         <tr [hidden]="currentCluster === lastCluster" class="clusterize-extra-row clusterize-bottom-space" [style.height]="bottomHeight"></tr>
