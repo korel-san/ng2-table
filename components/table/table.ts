@@ -50,14 +50,19 @@ import {Clusterize} from '../clusterize/clusterize';
        (scroll-changed)="onScrollChanged($event)"
        (clusterize-option-changed)="onClusterizeOptionChanged($event)">
     <table class="table table-striped table-bordered dataTable" role="grid" style="width: 100%;border-collapse: collapse;border-spacing: 0;table-layout: fixed;margin-bottom: 0;">
+      <thead>
+        <tr>
+          <th  *ng-for="#column of columns" [style.width]="column.fixedWidth || 'auto'" style="height:0px;padding:0px;border:0px;max-height:0px;"></th>
+        </tr>
+      </thead>
       <tbody id="{{config.clusterize.contentId}}" class="clusterize-content" tabindex="0" style="outline: 0;border-collapse: collapse;border-spacing: 0;">
-        <tr [hidden]="!config.clusterize.showNoDataRow" class="{{config.clusterize.noDataClass}}">
+        <tr [hidden]="config.clusterize.showNoDataRow" class="{{config.clusterize.noDataClass}}">
           <td *ng-for="#column of columns">{{config.clusterize.noDataText}}</td>
         </tr>
         <tr [hidden]="currentCluster === 0 || !config.clusterize.keepParity" class="clusterize-extra-row clusterize-keep-parity"></tr>
         <tr [hidden]="currentCluster === 0" class="clusterize-extra-row clusterize-top-space" [style.height]="topHeight"></tr>
-        <tr *ng-for="#tr of trs" class="clusterize-row">
-          <td *ng-for="#column of columns" [style.width]="column.fixedWidth || 'auto'">{{tr[column.name]}}</td>
+        <tr *ng-for="#tr of trs; #i = index" class="clusterize-row">
+          <td *ng-for="#column of columns">{{i}} {{tr[column.name]}}</td>
         </tr>
         <tr [hidden]="currentCluster === lastCluster" class="clusterize-extra-row clusterize-bottom-space" [style.height]="bottomHeight"></tr>
       </tbody>
@@ -76,11 +81,13 @@ export class Table implements OnInit, OnChanges {
   public trs:Array<any> = [];
   public currentCluster:number = 0;
   public lastCluster:number = 0;
-  public topHeight:number = 0;
-  public bottomHeight:number = 0;
+  public topHeight:string = '0px';
+  public bottomHeight:string = '0px';
   public itemsStart:number = 0;
   public itemsEnd:number = 200;
   private dataChanged:number;
+
+  private timeout:any;
 
   // Outputs (Events)
   public tableChanged:EventEmitter = new EventEmitter();
@@ -115,7 +122,6 @@ export class Table implements OnInit, OnChanges {
 
   onInit() {
     this.trs = this.rows.slice(this.itemsStart, this.itemsEnd);
-    console.log(this.config);
   }
 
   onChanges(changes) {
@@ -134,30 +140,36 @@ export class Table implements OnInit, OnChanges {
 
     this.currentCluster = event.currentCluster;
     this.lastCluster = event.lastCluster;
-    this.topHeight = event.topHeight;
-    this.bottomHeight = event.bottomHeight;
+    this.topHeight = event.topHeight + 'px';
+    this.bottomHeight = event.bottomHeight + 'px';
 
     if (event.currentCluster !== event.previousCluster) {
       this.itemsStart = event.itemsStart;
       this.itemsEnd = event.itemsEnd;
-      let blockPosition = event.blockPosition;
-      let removeItemsStart = event.removeItemsStart;
-      let removeItemsEnd = event.removeItemsEnd;
-
-      let trs = this.rows.slice(event.itemsStart, event.itemsEnd);
-      this.trs.splice(removeItemsStart, removeItemsEnd);
-
-      if (blockPosition === 'append') {
-        this.trs = this.trs.concat(trs);
+      if (this.timeout) {
+        this.timeout = null;
       }
-      if (blockPosition === 'prepend') {
-        this.trs = trs.concat(this.trs);
-      }
+      this.timeout = setTimeout(this.updateBlocks(event), 100);
     }
 
     this.onChangeTable({clusterize: this.config.clusterize});
   }
 
+  private updateBlocks(event) {
+    let self = this;
+
+    return function _updateBlocks() {
+      let trs = self.rows.slice(event.itemsStart, event.itemsEnd);
+      self.trs.splice(event.removeItemsStart, event.removeItemsEnd);
+
+      if (event.blockPosition === 'append') {
+        self.trs = self.trs.concat(trs);
+      }
+      if (event.blockPosition === 'prepend') {
+        self.trs = trs.concat(self.trs);
+      }
+    };
+  }
   onClusterizeOptionChanged(event) {
     if (event) {
       this.config.clusterize = event;

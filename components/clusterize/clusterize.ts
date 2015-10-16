@@ -142,6 +142,7 @@ export class Clusterize implements OnInit, OnChanges {
     let clusterHeight = this.options.blocksInCluster * blockHeight;
 
     this.options = {
+      showNoDataRow: false,
       itemHeight : itemHeight,
       blockHeight: blockHeight,
       rowsInCluster: rowsInCluster,
