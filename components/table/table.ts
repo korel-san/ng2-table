@@ -43,7 +43,7 @@ import {Clusterize} from '../clusterize/clusterize';
     </tr>
     </tbody>
   </table>
-  <div *ng-if="config && config.clusterize" id="{{config.clusterize.scrollId}}" class="clusterize-scroll" style="max-height: 200px; overflow: auto;"
+  <div *ng-if="config && config.clusterize" id="{{config.clusterize.scrollId}}" class="clusterize-scroll" style="max-height: 740px; overflow: auto;"
        [ng2-clusterize]="config.clusterize" [columns]="columns"
        [data-changed]="dataChanged"
        [rows-length]="rows.length"
@@ -56,13 +56,26 @@ import {Clusterize} from '../clusterize/clusterize';
         </tr>
       </thead>
       <tbody id="{{config.clusterize.contentId}}" class="clusterize-content" tabindex="0" style="outline: 0;border-collapse: collapse;border-spacing: 0;">
-        <tr [hidden]="config.clusterize.showNoDataRow" class="{{config.clusterize.noDataClass}}">
+        <tr [hidden]="!config.clusterize.showNoDataRow" class="{{config.clusterize.noDataClass}}">
           <td *ng-for="#column of columns">{{config.clusterize.noDataText}}</td>
         </tr>
         <tr [hidden]="currentCluster === 0 || !config.clusterize.keepParity" class="clusterize-extra-row clusterize-keep-parity"></tr>
         <tr [hidden]="currentCluster === 0" class="clusterize-extra-row clusterize-top-space" [style.height]="topHeight"></tr>
-        <tr *ng-for="#tr of trs; #i = index" class="clusterize-row">
-          <td *ng-for="#column of columns">{{i}} {{tr[column.name]}}</td>
+
+        <tr *ng-for="#tr of block1" class="clusterize-row block1 previous2">
+          <td *ng-for="#column of columns">{{tr[column.name]}}</td>
+        </tr>
+        <tr *ng-for="#tr of block2" class="clusterize-row block2 previous">
+          <td *ng-for="#column of columns">{{tr[column.name]}}</td>
+        </tr>
+        <tr *ng-for="#tr of block3" class="clusterize-row block3 current">
+          <td *ng-for="#column of columns">{{tr[column.name]}}</td>
+        </tr>
+        <tr *ng-for="#tr of block4" class="clusterize-row block4 next">
+          <td *ng-for="#column of columns">{{tr[column.name]}}</td>
+        </tr>
+        <tr *ng-for="#tr of block5" class="clusterize-row block5 next2">
+          <td *ng-for="#column of columns">{{tr[column.name]}}</td>
         </tr>
         <tr [hidden]="currentCluster === lastCluster" class="clusterize-extra-row clusterize-bottom-space" [style.height]="bottomHeight"></tr>
       </tbody>
@@ -78,13 +91,17 @@ export class Table implements OnInit, OnChanges {
   private _columns:Array<any> = [];
   public config:any = {};
 
-  public trs:Array<any> = [];
+  public block1:Array<any> = [];
+  public block2:Array<any> = [];
+  public block3:Array<any> = [];
+  public block4:Array<any> = [];
+  public block5:Array<any> = [];
   public currentCluster:number = 0;
   public lastCluster:number = 0;
   public topHeight:string = '0px';
   public bottomHeight:string = '0px';
   public itemsStart:number = 0;
-  public itemsEnd:number = 200;
+  public itemsEnd:number = 20;
   private dataChanged:number;
 
   private timeout:any;
@@ -121,11 +138,17 @@ export class Table implements OnInit, OnChanges {
   }
 
   onInit() {
-    this.trs = this.rows.slice(this.itemsStart, this.itemsEnd);
   }
 
   onChanges(changes) {
     if (changes.rows) {
+      if (this.config.clusterize) {
+        this.config.clusterize.showNoDataRow = false;
+        if (this.timeout) {
+          this.timeout = null;
+        }
+        this.timeout = setTimeout(this.updateBlocks(), 100);
+      }
       this.dataChanged = Date.now();
     }
   }
@@ -143,30 +166,53 @@ export class Table implements OnInit, OnChanges {
     this.topHeight = event.topHeight + 'px';
     this.bottomHeight = event.bottomHeight + 'px';
 
-    if (event.currentCluster !== event.previousCluster) {
-      this.itemsStart = event.itemsStart;
-      this.itemsEnd = event.itemsEnd;
-      if (this.timeout) {
-        this.timeout = null;
-      }
-      this.timeout = setTimeout(this.updateBlocks(event), 100);
+    this.itemsStart = event.itemsStart;
+    this.itemsEnd = event.itemsStart + this.config.clusterize.rowsInBlock;
+
+    if (this.timeout) {
+      this.timeout = null;
     }
+    this.timeout = setTimeout(this.updateBlocks(), 100);
 
     this.onChangeTable({clusterize: this.config.clusterize});
   }
 
-  private updateBlocks(event) {
+  private updateBlocks() {
     let self = this;
 
     return function _updateBlocks() {
-      let trs = self.rows.slice(event.itemsStart, event.itemsEnd);
-      self.trs.splice(event.removeItemsStart, event.removeItemsEnd);
+      let itemsStart = self.itemsStart;
+      let itemsEnd = itemsStart + self.config.clusterize.rowsInBlock;
 
-      if (event.blockPosition === 'append') {
-        self.trs = self.trs.concat(trs);
+      // current
+      self.block3 = self.rows.slice(itemsStart, itemsEnd);
+
+      // next
+      if (itemsEnd !== self.rows.length) {
+        itemsStart = itemsEnd;
+        itemsEnd = itemsStart + self.config.clusterize.rowsInBlock;
+        self.block4 = self.rows.slice(itemsStart, itemsEnd);
       }
-      if (event.blockPosition === 'prepend') {
-        self.trs = trs.concat(self.trs);
+
+      // next2
+      if (itemsEnd !== self.rows.length) {
+        itemsStart = itemsEnd;
+        itemsEnd = itemsStart + self.config.clusterize.rowsInBlock;
+        self.block5 = self.rows.slice(itemsStart, itemsEnd);
+      }
+
+      itemsEnd = self.itemsStart;
+      // previous
+      if (itemsEnd > self.config.clusterize.rowsInBlock) {
+        itemsStart = itemsEnd - self.config.clusterize.rowsInBlock - 1;
+        self.block2 = self.rows.slice(itemsStart, itemsEnd);
+        itemsEnd = itemsStart;
+      }
+
+      // previous2
+      if (itemsEnd > self.config.clusterize.rowsInBlock) {
+        itemsStart = itemsEnd - self.config.clusterize.rowsInBlock - 1;
+        self.block1 = self.rows.slice(itemsStart, itemsEnd);
       }
     };
   }

@@ -24,11 +24,11 @@ export class Clusterize implements OnInit, OnChanges {
   private static CONST_DEFAULT_OPTIONS = {
     itemHeight: 0,
     blockHeight: 0,
-    rowsInBlock: 50,
+    rowsInBlock: 20,
     rowsInCluster: 0,
     rowsAbove: 0,
     clusterHeight: 0,
-    blocksInCluster: 4,
+    blocksInCluster: 5,
     tag: 'tr',
     contentTag: null,
     showNoDataRow: true,
@@ -89,18 +89,16 @@ export class Clusterize implements OnInit, OnChanges {
   }
 
   get currentCluster() {
-    console.log(this.options);
     return Math.floor(this.scrollTop / (this.options.clusterHeight - this.options.blockHeight)) || 0;
   }
 
   get lastCluster() {
-    return Math.floor(this._options.itemHeight * this.rowsLength / this.options.clusterHeight);
+    return Math.floor(this.options.itemHeight * this.rowsLength / this.options.clusterHeight);
   }
 
   // *** IMPLEMENTS ***
   constructor (@Host() elem:ElementRef) {
     this.scrollElem = elem.nativeElement;
-    console.log(this.scrollElem, this.contentElem);
   }
 
   onChanges(changes) {
@@ -108,7 +106,7 @@ export class Clusterize implements OnInit, OnChanges {
 
   onInit() {
     this.updateOptions();
-    this.calcScroll();
+    // this.calcScroll();
   }
 
   // *** EVENTS HANDLERS ***
@@ -142,7 +140,6 @@ export class Clusterize implements OnInit, OnChanges {
     let clusterHeight = this.options.blocksInCluster * blockHeight;
 
     this.options = {
-      showNoDataRow: false,
       itemHeight : itemHeight,
       blockHeight: blockHeight,
       rowsInCluster: rowsInCluster,
@@ -154,25 +151,33 @@ export class Clusterize implements OnInit, OnChanges {
   public calcScroll() {
     if (this.options.clusterize) {
       this.scrollTop = this.scrollElem.scrollTop;
-      let itemsStart = Math.max((this.options.rowsInCluster - this.options.rowsInBlock) * this.currentCluster, 0);
-      let itemsEnd = itemsStart + this.options.rowsInCluster;
+
+      let numberBlocks = Math.floor(this.scrollTop / this.options.blockHeight);
+      let itemsStart = numberBlocks * this.options.rowsInBlock;
+        // Math.max((this.options.rowsInCluster - this.options.rowsInBlock) * this.currentCluster, 0);
+      let itemsEnd = itemsStart + this.options.rowsInBlock;
       let topSpace = itemsStart * this.options.itemHeight;
       let bottomSpace = (this.rowsLength - itemsEnd) * this.options.itemHeight;
 
+      if (this.currentCluster === 0) {
+        topSpace = 0;
+      }
+      if (this.currentCluster === this.lastCluster) {
+        bottomSpace = 0;
+      }
+
+      console.log('options: ', this.options);
       console.log('currentCluster: ', this.currentCluster);
       console.log('previousCluster: ', this.previousCluster);
       console.log('scrollTop: ', this.scrollTop);
+
       this.scrollChanged.next({
         currentCluster: this.currentCluster,
         previousCluster: this.previousCluster,
         lastCluster: this.lastCluster,
         topHeight: topSpace,
         bottomHeight: bottomSpace,
-        itemsStart: itemsStart,
-        itemsEnd: itemsEnd,
-        blockPosition: this.currentCluster > this.previousCluster ? 'append' : 'prepend',
-        removeItemsStart: this.currentCluster > this.previousCluster ? 0 : -this.options.rowsInBlock,
-        removeItemsEnd: this.currentCluster > this.previousCluster ? this.options.rowsInBlock : this.options.rowsInCluster
+        itemsStart: itemsStart
       });
       this.previousCluster = this.currentCluster;
     }

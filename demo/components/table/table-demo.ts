@@ -21,12 +21,13 @@ let template = require('./table-demo.html');
 export class TableDemo implements OnInit {
   public rows:Array<any> = [];
   public columns:Array<any> = [
+    {title: 'Indx', name: 'indx', sort: 'asc', fixedWidth: '10%'},
     {title: 'Name', name: 'name', fixedWidth: '20%'},
     {title: 'Position', name: 'position', sort: false, fixedWidth: '20%'},
     {title: 'Office', name: 'office', fixedWidth: '20%'},
     {title: 'Extn.', name: 'ext', fixedWidth: '10%'},
-    {title: 'Start date', name: 'startDate', fixedWidth: '15%'},
-    {title: 'Salary', name: 'salary', fixedWidth: '15%'}
+    {title: 'Start date', name: 'startDate', fixedWidth: '10%'},
+    {title: 'Salary', name: 'salary', fixedWidth: '10%'}
   ];
   public page:number = 1;
   public itemsPerPage:number = 10;
@@ -48,10 +49,12 @@ export class TableDemo implements OnInit {
   private data:Array<any> = TableData;
 
   constructor() {
-    for (let i = 7; i; i--) {
-      this.data = this.data.concat(this.data);
+    for (let i = 0; i < this.data.length; i++) {
+      this.data[i].indx = i;
+      this.data[i].name = i + ' ' + this.data[i].name;
     }
-    console.log(this.data.length);
+
+    console.log('count: ', this.data.length);
     this.length = this.data.length;
   }
 
@@ -70,13 +73,13 @@ export class TableDemo implements OnInit {
   }
 
   changeSort(data, config) {
-    if (!config.sorting) {
+    if (!config.sorting || !this.config.sorting.columns.length) {
       return data;
     }
 
     // simple sorting
     return data.sort((previous, current) => {
-      let columns = this.config.sorting.columns || [];
+      let columns = this.config.sorting.columns;
       for (let i = 0; i < columns.length; i++) {
         let columnName = columns[i].name;
 
